@@ -1,19 +1,57 @@
 module Main where
 
-import KDDL.CommandLine
-import Control.Monad.Except
+import Text.Parsec
+import Text.Parsec.Token (LanguageDef)
+import qualified Text.Parsec.Token as PT
+import Text.Parsec.Char
+import Text.Parsec.Language (emptyDef)
 
-a :: ExceptT String IO Int
-a = ExceptT $ pure $ Right 8
+data FieldType = Int32 | String | Seq FieldType deriving Show
 
-b :: ExceptT String IO Int
-b = ExceptT $ pure $ Left "mjo"
+data FieldDef = FieldDef FieldType String deriving Show
 
+data StructDef = StructDef String [FieldDef] deriving Show
+
+kddlDef :: LanguageDef st
+kddlDef = emptyDef {
+  PT.commentStart = "/*",
+  PT.commentEnd = "*/",
+  PT.commentLine = "//",
+  PT.reservedNames = ["struct"],
+  PT.identStart  = letter,
+  PT.identLetter = alphaNum <|> char '_'
+}
+
+kddlLexer = PT.makeTokenParser kddlDef
+
+identifier = PT.identifier kddlLexer
+whiteSpace = PT.whiteSpace kddlLexer
+semicolon = PT.semi kddlLexer
+braces = PT.braces kddlLexer
+
+typeInt32 = string "int32" *> return Int32
+typeString = string "string" *> return String
+
+fieldType = typeInt32 <|> typeString 
+
+fieldDef = do 
+  t <- fieldType
+  whiteSpace
+  n <- identifier
+  semicolon
+  return $ FieldDef t n
+  
+
+struct = do
+  string "struct"
+  whiteSpace
+  name <- identifier
+  fields <- braces $ many fieldDef
+  return $ StructDef name fields
+
+kddlParser = whiteSpace *> many struct
+
+result = parse kddlParser "Kotak" "    struct MyStruct { int32 b1_23; }"
 
 main :: IO ()
-main = (show <$> runExceptT result) >>= putStrLn
-  where
-    result = do
-            x <- b
-            y <- a
-            return (x + y)
+main = putStrLn $ show result

@@ -1,57 +1,32 @@
 module Main where
 
+import KDDL.Core
+import KDDL.CommandLine.Public
+import KDDL.Parser.Public
+
 import Text.Parsec
-import Text.Parsec.Token (LanguageDef)
-import qualified Text.Parsec.Token as PT
-import Text.Parsec.Char
-import Text.Parsec.Language (emptyDef)
+import Control.Concurrent
+import Data.List
+import Data.Either
 
-data FieldType = Int32 | String | Seq FieldType deriving Show
+doStuff x = do
+  sequence $ intersperse (threadDelay 500000) (replicate 10 $ putStrLn x)
+  return ()
 
-data FieldDef = FieldDef FieldType String deriving Show
+parseFile :: String -> IO (Either ParseError [StructDef])
+parseFile path = parseKddl path <$> readFile path
 
-data StructDef = StructDef String [FieldDef] deriving Show
+combineParseResults :: [Either ParseError [StructDef]] -> Either [ParseError] [StructDef]
+combineParseResults e = 
+  case partitionEithers e of 
+    ([], rights) -> Right $ concat rights
+    (errors, _) -> Left errors
 
-kddlDef :: LanguageDef st
-kddlDef = emptyDef {
-  PT.commentStart = "/*",
-  PT.commentEnd = "*/",
-  PT.commentLine = "//",
-  PT.reservedNames = ["struct"],
-  PT.identStart  = letter,
-  PT.identLetter = alphaNum <|> char '_'
-}
-
-kddlLexer = PT.makeTokenParser kddlDef
-
-identifier = PT.identifier kddlLexer
-whiteSpace = PT.whiteSpace kddlLexer
-semicolon = PT.semi kddlLexer
-braces = PT.braces kddlLexer
-
-typeInt32 = string "int32" *> return Int32
-typeString = string "string" *> return String
-
-fieldType = typeInt32 <|> typeString 
-
-fieldDef = do 
-  t <- fieldType
-  whiteSpace
-  n <- identifier
-  semicolon
-  return $ FieldDef t n
-  
-
-struct = do
-  string "struct"
-  whiteSpace
-  name <- identifier
-  fields <- braces $ many fieldDef
-  return $ StructDef name fields
-
-kddlParser = whiteSpace *> many struct
-
-result = parse kddlParser "Kotak" "    struct MyStruct { int32 b1_23; }"
+parseFiles :: [String] -> IO (Either [ParseError] [StructDef])
+parseFiles paths = fmap combineParseResults $ sequence $ map parseFile paths
 
 main :: IO ()
-main = putStrLn $ show result
+main = do
+    job <- parseJob
+    parseResult <- parseFiles $ sources job
+    putStrLn $ show parseResult

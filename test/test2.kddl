@@ -1,0 +1,11 @@
+struct Test1 {
+  int32 id;
+  string name;
+}
+
+/*  KOLBASA   */
+
+struct Test2 {
+  int32 a;
+  int32 b;
+}

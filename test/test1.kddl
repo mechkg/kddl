@@ -1,4 +1,4 @@
-struct Test1 {
+struct Ыкуыкуыы {
   int32 id;
   string name;
 }

@@ -1,6 +1,10 @@
 module KDDL.Parser.Public where
 
-import Text.Parsec
 import KDDL.Parser.Private
+import Text.Megaparsec
+import KDDL.Core
+import Data.Text
+import Data.Bifunctor
 
-parseKddl = parse kddlParser
+parseKddl :: String -> Text -> Either String [StructDef]
+parseKddl src input = first parseErrorPretty (parse kddlParser src input)

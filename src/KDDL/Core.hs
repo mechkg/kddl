@@ -18,4 +18,7 @@ data FieldType = Int32 | String | Seq FieldType deriving Show
     
 data FieldDef = FieldDef FieldType String deriving Show
 
-data StructDef = StructDef String [FieldDef] deriving Show
+data StructDef = StructDef {
+    structName :: String,
+    structFields :: [FieldDef]
+ } deriving Show
